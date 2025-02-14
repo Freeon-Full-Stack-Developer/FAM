@@ -8,7 +8,7 @@ requirements = python3,kivy,telebot,sqlite3
 orientation = portrait
 log_level = 2
 
-source.dir = ''
+source.dir = './'
 
 
 
