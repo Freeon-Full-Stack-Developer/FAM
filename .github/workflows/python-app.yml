@@ -3,8 +3,6 @@ name: Build APK
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   build:
@@ -21,26 +19,26 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip python3-setuptools git zip unzip openjdk-17-jdk cython3
+          sudo apt-get install -y python3-pip python3-setuptools git unzip openjdk-17-jdk cython3
           pip3 install --user buildozer
 
       - name: Set up Android SDK and NDK
         run: |
+          rm -rf ~/android-sdk ~/android-ndk*
           mkdir -p ~/android-sdk/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip commandlinetools-linux-9477386_latest.zip
           mv cmdline-tools ~/android-sdk/cmdline-tools/latest
           
-          # Принять ВСЕ лицензии
           yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk --licenses
           
-          # Установить компоненты
           ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk \
             "platform-tools" \
             "platforms;android-34" \
-            "build-tools;34.0.0"
+            "build-tools;34.0.0-rc5"
           
-          # NDK r25b
+          ls -l ~/android-sdk/build-tools  # Проверка установки
+          
           wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
           unzip android-ndk-r25b-linux.zip
           mv android-ndk-r25b ~/android-ndk
@@ -50,9 +48,6 @@ jobs:
           export ANDROID_SDK_ROOT=~/android-sdk
           export ANDROID_NDK_HOME=~/android-ndk
           export PATH=$PATH:$HOME/.local/bin:~/android-sdk/cmdline-tools/latest/bin
-          
-          # Убедиться, что build-tools установлены
-          ls -l ~/android-sdk/build-tools/34.0.0
           
           buildozer -v android debug
 
