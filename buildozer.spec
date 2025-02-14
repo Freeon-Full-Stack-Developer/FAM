@@ -8,7 +8,7 @@ requirements = python3,kivy,telebot,sqlite3
 orientation = portrait
 log_level = 2
 
-source.dir = 'main.py'
+
 
 
 
@@ -27,8 +27,8 @@ source.dir = 'main.py'
 version = 0.1
 
 # (str) Application versioning (method 2)
-# version.regex = __version__ = ['"](.*)['"]
-# version.filename = %(source.dir)s/main.py
+version.regex = __version__ = ['"](.*)['"]
+version.filename = %(source.dir)s/main.py
 
 
 
