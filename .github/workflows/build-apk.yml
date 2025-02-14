@@ -1,0 +1,68 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip python3-setuptools git unzip openjdk-17-jdk cython3
+          pip3 install --user buildozer
+
+      # Шаг установки Android SDK и NDK
+      - name: Set up Android SDK and NDK
+        run: |
+          # Удаляем старые файлы SDK/NDK
+          rm -rf ~/android-sdk ~/android-ndk*
+
+          # Создаем структуру директорий
+          mkdir -p ~/android-sdk/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip commandlinetools-linux-9477386_latest.zip
+          mv cmdline-tools ~/android-sdk/cmdline-tools/latest
+
+          # Принимаем лицензии
+          yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk --licenses
+
+          # Устанавливаем компоненты (исправленная версия build-tools)
+          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"  # Здесь исправлено на 34.0.0!
+
+          # Устанавливаем NDK r25b
+          wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+          unzip android-ndk-r25b-linux.zip
+          mv android-ndk-r25b ~/android-ndk
+
+      # Шаг сборки APK
+      - name: Build APK
+        run: |
+          # Экспортируем переменные окружения
+          export ANDROID_SDK_ROOT=~/android-sdk
+          export ANDROID_NDK_HOME=~/android-ndk
+          export PATH=$PATH:$HOME/.local/bin:~/android-sdk/cmdline-tools/latest/bin
+
+          # Собираем APK
+          buildozer -v android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: myapp.apk
+          path: bin/*.apk
