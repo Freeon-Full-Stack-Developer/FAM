@@ -1,0 +1,63 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - main  # Запускать сборку при пуше в ветку main
+  pull_request:
+    branches:
+      - main  # Запускать сборку при пулл-реквесте в ветку main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip python3-setuptools git zip unzip openjdk-17-jdk
+          pip3 install --user buildozer
+
+      - name: Set up Android SDK and NDK
+        run: |
+          mkdir -p ~/android-sdk/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip commandlinetools-linux-9477386_latest.zip
+          mv cmdline-tools ~/android-sdk/cmdline-tools/latest
+          yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
+          unzip android-ndk-r25c-linux.zip
+          mv android-ndk-r25c ~/android-ndk
+
+      - name: Configure Buildozer
+        run: |
+          echo "[app]" > buildozer.spec
+          echo "title = MyApp" >> buildozer.spec
+          echo "package.name = myapp" >> buildozer.spec
+          echo "package.domain = org.example" >> buildozer.spec
+          echo "source.include_exts = py,png,jpg,kv,atlas" >> buildozer.spec
+          echo "source.include_patterns = assets/*,images/*,data/*" >> buildozer.spec
+          echo "requirements = python3,kivy,telebot,sqlite3" >> buildozer.spec
+          echo "orientation = portrait" >> buildozer.spec
+          echo "log_level = 2" >> buildozer.spec
+          echo "android.sdk_path = /home/runner/android-sdk" >> buildozer.spec
+          echo "android.ndk_path = /home/runner/android-ndk" >> buildozer.spec
+
+      - name: Build APK
+        run: |
+          export PATH=$PATH:/home/runner/.local/bin
+          buildozer -v android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: myapp.apk
+          path: bin/*.apk
