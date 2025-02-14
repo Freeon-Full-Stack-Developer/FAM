@@ -3,6 +3,8 @@ name: Build APK
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   build:
@@ -24,30 +26,31 @@ jobs:
 
       - name: Set up Android SDK and NDK
         run: |
-          # Установка Android Command Line Tools
-          mkdir -p ~/android-sdk
-          cd ~/android-sdk
+          # Исправленный путь для Android SDK
+          mkdir -p ~/android-sdk/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip commandlinetools-linux-9477386_latest.zip
-          mv cmdline-tools tools
+          mv cmdline-tools ~/android-sdk/cmdline-tools/latest
           
-          # Принятие лицензий
-          yes | ./tools/bin/sdkmanager --licenses
+          # Принятие лицензий (обязательный шаг!)
+          yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk --licenses
           
           # Установка компонентов
-          ./tools/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           
           # Установка NDK
-          cd ~
-          wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-          unzip android-ndk-r25b-linux.zip
-          mv android-ndk-r25b android-ndk
+          wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
+          unzip android-ndk-r25c-linux.zip
+          mv android-ndk-r25c ~/android-ndk
 
       - name: Build APK
         run: |
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          export ANDROID_NDK_HOME=$HOME/android-ndk
-          export PATH=$PATH:$HOME/.local/bin
+          export ANDROID_SDK_ROOT=~/android-sdk
+          export ANDROID_NDK_HOME=~/android-ndk
+          export PATH=$PATH:$HOME/.local/bin:~/android-sdk/platform-tools
+          
+          # Создание buildozer.spec при отсутствии
+          buildozer init || true
           
           buildozer -v android debug
 
