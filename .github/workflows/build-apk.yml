@@ -3,6 +3,8 @@ name: Build APK
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   build:
@@ -16,44 +18,75 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip python3-setuptools git unzip openjdk-17-jdk cython3
+          sudo apt-get install -y \
+            python3-pip \
+            python3-setuptools \
+            git \
+            unzip \
+            openjdk-17-jdk \
+            cython3 \
+            libssl-dev \
+            zlib1g-dev
           pip3 install --user buildozer
 
       - name: Setup Android SDK/NDK
         run: |
+          # Clean previous installations
           rm -rf ~/android-sdk ~/android-ndk*
+
+          # Install Android Command Line Tools
           mkdir -p ~/android-sdk/cmdline-tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip commandlinetools-linux-9477386_latest.zip
           mv cmdline-tools ~/android-sdk/cmdline-tools/latest
-          
-          cd ~/android-sdk
-          ln -s cmdline-tools/latest tools
-          
-          yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk --licenses
-          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          
+
+          # Fix compatibility paths
+          ln -sf ~/android-sdk/cmdline-tools/latest ~/android-sdk/tools
+
+          # Accept licenses (forced mode)
+          yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk --licenses >/dev/null 2>&1
+
+          # Install core components
+          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"  # Stable version
+
+          # Verify build-tools installation
+          ls -l ~/android-sdk/build-tools/34.0.0/aidl || exit 1
+
+          # Install NDK r25b
           wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
           unzip android-ndk-r25b-linux.zip
           mv android-ndk-r25b ~/android-ndk
 
-      - name: Build APK
+      - name: Configure build
+        run: |
+          # Clean deprecated settings
+          sed -i '/android.sdk/d; /android.ndk/d; /android.build_tools/d' buildozer.spec
+
+          # Update build configuration
+          echo -e "\n[android]\nndk = 25b\nbuild_tools = 34.0.0\nsdk_dir = $HOME/android-sdk" >> buildozer.spec
+
+          # Show final spec file
+          cat buildozer.spec
+
+      - name: Build application
         run: |
           export ANDROID_SDK_ROOT=~/android-sdk
           export ANDROID_NDK_HOME=~/android-ndk
-          export PATH=$PATH:$HOME/.local/bin:~/android-sdk/cmdline-tools/latest/bin
+          export PATH=$PATH:$HOME/.local/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
 
-          # Фиксируем настройки
-          sed -i '/android.sdk/d; /android.ndk/d; /android.build_tools/d' buildozer.spec
-          echo -e "\nandroid.ndk = 25b\nandroid.build_tools = 34.0.0" >> buildozer.spec
-          
+          # Force clean build
+          buildozer android clean
           buildozer -v android debug
 
-      - name: Upload APK
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: bin/*.apk
+          retention-days: 1
