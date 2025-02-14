@@ -1,5 +1,6 @@
 [app]
 title = Telegram Bot App
+source.dir = .
 package.name = telegrambotapp
 package.domain = org.example
 source.include_exts = py,png,jpg,kv,atlas
@@ -7,9 +8,9 @@ source.include_patterns = assets/*,images/*,data/*
 requirements = python3,kivy,telebot,sqlite3
 orientation = portrait
 log_level = 2
+version = 0.1
 
 
-source.dir = .
 
 
 
@@ -24,7 +25,7 @@ source.dir = .
 #source.exclude_patterns = license,images/*/*.jpg
 
 # (str) Application versioning (method 1)
-version = 0.1
+
 
 # (str) Application versioning (method 2)
 version.regex = __version__ = ['"](.*)['"]
