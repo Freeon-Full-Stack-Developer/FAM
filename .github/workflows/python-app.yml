@@ -31,13 +31,16 @@ jobs:
           unzip commandlinetools-linux-9477386_latest.zip
           mv cmdline-tools ~/android-sdk/cmdline-tools/latest
           
-          # Создаем символическую ссылку
-          cd ~/android-sdk
-          ln -s cmdline-tools/latest tools
-          
+          # Принять ВСЕ лицензии
           yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk --licenses
-          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           
+          # Установить компоненты
+          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
+          
+          # NDK r25b
           wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
           unzip android-ndk-r25b-linux.zip
           mv android-ndk-r25b ~/android-ndk
@@ -48,7 +51,9 @@ jobs:
           export ANDROID_NDK_HOME=~/android-ndk
           export PATH=$PATH:$HOME/.local/bin:~/android-sdk/cmdline-tools/latest/bin
           
-          buildozer init || true
+          # Убедиться, что build-tools установлены
+          ls -l ~/android-sdk/build-tools/34.0.0
+          
           buildozer -v android debug
 
       - name: Upload APK
