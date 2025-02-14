@@ -21,4 +21,4 @@ android.sdk_path = /home/runner/android-sdk
 android.ndk_path = /home/runner/android-ndk
 android.ndk = 25b
 android.sdk = 34
-android.build_tools = 34.0.0-rc5
+android.build_tools = 34.0.0
