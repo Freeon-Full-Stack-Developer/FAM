@@ -3,8 +3,6 @@ name: Build APK
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   build:
@@ -21,62 +19,37 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            python3-pip \
-            python3-setuptools \
-            git \
-            unzip \
-            openjdk-17-jdk \
-            cython3
+          sudo apt-get install -y python3-pip python3-setuptools git unzip openjdk-17-jdk cython3
           pip3 install --user buildozer
 
       - name: Setup Android SDK/NDK
         run: |
-          # Удаляем предыдущие установки
           rm -rf ~/android-sdk ~/android-ndk*
-
-          # Установка Android Command Line Tools
           mkdir -p ~/android-sdk/cmdline-tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip commandlinetools-linux-9477386_latest.zip
           mv cmdline-tools ~/android-sdk/cmdline-tools/latest
-
-          # Фикс путей для совместимости
+          
           cd ~/android-sdk
           ln -s cmdline-tools/latest tools
-
-          # Принятие лицензий
-          yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
-
-          # Установка компонентов
-          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk \
-            "platform-tools" \
-            "platforms;android-34" \
-            "build-tools;34.0.0"
-
-          # Установка NDK
+          
+          yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk --licenses
+          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=~/android-sdk "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          
           wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
           unzip android-ndk-r25b-linux.zip
           mv android-ndk-r25b ~/android-ndk
 
-          # Проверка установки
-          ls -l ~/android-sdk/build-tools/34.0.0
-          ls -l ~/android-ndk
-
       - name: Build APK
         run: |
-          # Экспорт переменных
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          export ANDROID_NDK_HOME=$HOME/android-ndk
-          export PATH=$PATH:$HOME/.local/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+          export ANDROID_SDK_ROOT=~/android-sdk
+          export ANDROID_NDK_HOME=~/android-ndk
+          export PATH=$PATH:$HOME/.local/bin:~/android-sdk/cmdline-tools/latest/bin
 
-          # Фикс для Buildozer
-          echo "Удаляем устаревшие настройки..."
-          sed -i '/android.sdk/d' buildozer.spec
-          sed -i '/android.ndk/d' buildozer.spec
+          # Фиксируем настройки
+          sed -i '/android.sdk/d; /android.ndk/d; /android.build_tools/d' buildozer.spec
           echo -e "\nandroid.ndk = 25b\nandroid.build_tools = 34.0.0" >> buildozer.spec
-
-          # Сборка
+          
           buildozer -v android debug
 
       - name: Upload APK
@@ -84,4 +57,3 @@ jobs:
         with:
           name: app-release
           path: bin/*.apk
-          retention-days: 1
